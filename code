@@ -1,0 +1,137 @@
+int pin_Out_S0 = 2;
+int pin_Out_S1 = 3;
+int pin_Out_S2 = 4;
+int input = A7;
+int front=A6;
+int irval[8] = {0};
+int sequence[]={6,3,4,2,5,0,7,1};
+const int leftMotor2 = 7;
+const int leftMotor1 = 6;
+const int rightMotor1 = 10;
+const int rightMotor2= 9;
+const int ENleft= 5;
+const int ENright =11;
+int min[]={190,190,150,340,190,150,180,90};
+int max[]={890,890,900,890,890,890,890,895};
+int threshold=100;
+
+void setup() {
+  pinMode(pin_Out_S0, OUTPUT);
+  pinMode(pin_Out_S1, OUTPUT);
+  pinMode(pin_Out_S2, OUTPUT);
+  //pinMode(, INPUT);
+  pinMode(leftMotor1, OUTPUT);
+  pinMode(leftMotor2, OUTPUT);
+  pinMode(rightMotor1, OUTPUT);
+  pinMode(rightMotor2, OUTPUT);
+  pinMode(ENleft, OUTPUT);
+  pinMode(ENright, OUTPUT);
+
+  analogWrite(ENleft, 0);
+  analogWrite(ENright, 0);
+  Serial.begin(9600);
+ }
+
+// int i=200;
+
+void loop() {
+
+
+   updatemux();
+//   for(int i = 0; i < 8; i ++)
+//   {
+//      Serial.print(irval[i]);
+//      Serial.print("       ");
+//    }
+//     Serial.println();
+//right();
+//linefollow();
+while(1){  
+ if (irval[0] < threshold ) {
+        left(); 
+        break;
+        }
+
+// else if (irval[7] < threshold ){
+       linefollow();      
+     
+
+ if (irval[6] < threshold ) { 
+       right();
+       break;
+     }
+}
+} 
+
+void linefollow()
+{
+  float error = (2*irval[1] + irval[2] - irval[4] - 2*irval[5]);
+//error=0.1*error;
+
+
+
+float previousError=0;
+
+  float P = error;
+  float I = I + error;
+  float D = error - previousError;
+  //Kp = 0.0006 * (1000 - analogRead(3));
+     float Kp=15;
+     float Kd = 10*Kp;
+     float Ki = 0;
+
+  float PIDvalue = (Kp * P)  + (Kd * D) + (Ki*I);
+  PIDvalue=PIDvalue/100;
+  //Serial.print(PIDvalue);
+ // Serial.print("|||||");
+  previousError = error;
+
+  int lsp = constrain(150 - PIDvalue,80,200);
+  int rsp = constrain(150 + PIDvalue,80,200);
+//   Serial.print(lsp);
+//   Serial.print("      ");
+//  Serial.print(rsp);
+//   Serial.println();
+
+  digitalWrite(leftMotor1, HIGH);
+  digitalWrite(leftMotor2, LOW);
+  digitalWrite(rightMotor1, LOW);
+  digitalWrite(rightMotor2, HIGH);
+  analogWrite(ENleft,rsp);
+  analogWrite(ENright,lsp);
+   }
+
+void left() {
+           do{
+            digitalWrite(leftMotor1, HIGH);
+            digitalWrite(leftMotor2, LOW);
+            digitalWrite(rightMotor1, LOW);
+            digitalWrite(rightMotor2, HIGH);
+            analogWrite(ENleft,80);
+            analogWrite(ENright,150);
+            updatemux();
+           }while(irval[3]>threshold);
+}
+
+void right(){
+           do {
+           digitalWrite(leftMotor1, HIGH);
+           digitalWrite(leftMotor2, LOW);
+           digitalWrite(rightMotor1, LOW);
+           digitalWrite(rightMotor2, HIGH);
+           analogWrite(ENleft,150);
+           analogWrite(ENright,80);
+           updatemux();
+           }while(irval[3]>threshold);
+}
+
+
+void updatemux () {
+  for (int i = 0; i < 8; i++){
+    digitalWrite(pin_Out_S0, HIGH && (i & B00000001));
+    digitalWrite(pin_Out_S1, HIGH && (i & B00000010));
+    digitalWrite(pin_Out_S2, HIGH && (i & B00000100));
+   // irval[sequence[i]] = analogRead(input);
+    irval[sequence[i]] = constrain(map(analogRead(input), min[sequence[i]], max[sequence[i]], 0, 255), 0, 255);
+  }
+}
